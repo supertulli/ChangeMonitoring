@@ -1,6 +1,7 @@
 from src.change_detector.control_state import ControlState
 import pandas as pd
 from scipy.stats import beta
+from scipy.spatial.distance import jensenshannon
 from src.change_detector.stats_and_distance.stats_and_distance import JSD_distance, iter_geo_mean_estimator
 
 class PDFChangeDetector:
@@ -86,12 +87,15 @@ class PDFChangeDetector:
             self._update_alpha_fading_pdf(new_pdf)
             pdf_dist = JSD_distance(self._reference_PDF, self._alpha_fading_pdf)
             print("PDF distance:", pdf_dist, "current_order:", self._run_order)
+            # print("JSD_distance:", jensenshannon(self._reference_PDF, self._alpha_fading_pdf, base=2)) # alternatively
             self._update_beta_distribution_parameters(pdf_dist)
             self._run_order += 1
             if not all([self._estimated_alpha, self._estimated_beta]):
                 print("Only one distance estimator is available.")
                 return ControlState.IN_CONTROL
-            u1, u2, u3 = map(lambda x: beta.ppf(x, self._estimated_alpha, self._estimated_beta), map(lambda x: 0.5+x/2,[self._z1, self._z2, self._z3]))
+            u1, u2, u3 = map(lambda x: beta.ppf(x, self._estimated_alpha, self._estimated_beta), 
+                            map(lambda x: (1+x)/2,
+                                [self._z1, self._z2, self._z3]))
             if not any([self._min_u1, self._min_u2, self._min_u3]) or u1 < self._min_u1:
                 self._min_u1, self._min_u2, self._min_u3 = u1, u2, u3
             print("current u1:", u1)
