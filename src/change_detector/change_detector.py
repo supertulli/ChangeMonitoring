@@ -91,7 +91,7 @@ class PDFChangeDetector:
             if not all([self._estimated_alpha, self._estimated_beta]):
                 print("Only one distance estimator is available.")
                 return ControlState.IN_CONTROL
-            u1, u2, u3 = map(lambda x: beta.ppf(x, self._estimated_alpha, self._estimated_beta), [self._z1, self._z2, self._z3])
+            u1, u2, u3 = map(lambda x: beta.ppf(x, self._estimated_alpha, self._estimated_beta), map(lambda x: 0.5+x/2,[self._z1, self._z2, self._z3]))
             if not any([self._min_u1, self._min_u2, self._min_u3]) or u1 < self._min_u1:
                 self._min_u1, self._min_u2, self._min_u3 = u1, u2, u3
             print("current u1:", u1)
