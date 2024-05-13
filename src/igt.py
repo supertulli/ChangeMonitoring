@@ -1,6 +1,3 @@
-from multiprocessing.pool import Pool
-
-
 from concurrent.futures import ProcessPoolExecutor
 from itertools import repeat
 
