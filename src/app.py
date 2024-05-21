@@ -1,10 +1,11 @@
-from calendar import month
+import io
 import json
 import os
 
 from datetime import date
 
 import streamlit as st
+import streamlit_ext as ste
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -56,6 +57,7 @@ def get_period_freq_tables(chapter_df:pd.DataFrame, period_string) -> tuple[pd.D
      return period_freq_tables(chapter_df, 'ccsr_code', period_string)
 
 # @st.cache_data(show_spinner="Calculating IGT embeddings...")
+@st.cache_data
 def igt_embbedings(source_df:pd.DataFrame, multiprocessing:bool = False) -> np.ndarray:
      
      dist_matrix = multiprocessing_get_dist_matrix(source_df) if multiprocessing else get_dist_matrix(source_df)
@@ -100,6 +102,17 @@ sns.heatmap(plot_df.sort_index(ascending=False), ax=ax)
 
 st.pyplot(fig)
 
+save_heatmap_filename = "heatmap.png"
+heatmap_img = io.BytesIO()
+fig.savefig(heatmap_img, format='png')
+
+btn = ste.download_button(
+     label="download heatmap",
+     data=heatmap_img,
+     file_name=save_heatmap_filename,
+     mime='image/png'
+)
+
 if freq_type == 'relative':
 
      with st.sidebar.form("igt_plot"):
@@ -125,6 +138,16 @@ if freq_type == 'relative':
                     fig = get_3D_IGT_plot(igt_embbedings, point_labels)
                else:
                     fig = get_2D_IGT_plot(igt_embbedings, point_labels)
-               st.pyplot(fig)     
+               st.pyplot(fig)
+               save_igt_filename = "igt.png"
+               igt_img = io.BytesIO()
+               fig.savefig(igt_img, format='png')
 
+               ste.download_button(
+                    label="download IGT",
+                    data=igt_img,
+                    file_name=save_igt_filename,
+                    mime='image/png'
+               )
+               
 st.dataframe(active_df.drop('date', axis=1)) # Just to show the dataframe, will be omitted in production

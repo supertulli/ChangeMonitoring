@@ -11,3 +11,4 @@ icd-mappings
 
 tqdm
 streamlit
+streamlit-ext
