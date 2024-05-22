@@ -11,7 +11,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from icdmappings import Mapper
+from icdmappings import Mapper, Validator
 
 from inout.load_omop import OMOP_data
 from data_handler import period_freq_tables
@@ -21,6 +21,11 @@ from igt import get_dist_matrix, get_IGT_embeddings, get_2D_IGT_plot, get_3D_IGT
 CSV_FOLDER_PATH = os.getenv('CSV_FOLDER_PATH')
 TABLE_STRUCTURE_JSON = os.getenv('TABLE_STRUCTURE_JSON')
 ICD10_CHAPTER_DESCRIPTION = os.getenv('ICD10_CHAPTER_DESCRIPTION')
+HLUZ_DATA = os.getenv('HLUZ_data')
+ICD_VERSION = os.getenv('ICD_VERSION') # either 'icd9' or 'icd10'
+CCR_VERSION = os.getenv('CCR_VERSION') # either 'ccs' or 'ccsr'
+
+HLuz_data = (HLUZ_DATA == 'True')
 
 @st.cache_data(show_spinner="Loading csv data to memory pandas database...")
 def load_pandas_db(csv_folder_path:str = CSV_FOLDER_PATH, tables_structure_json :dict = TABLE_STRUCTURE_JSON) -> OMOP_data:
@@ -38,23 +43,42 @@ def get_visit_conditions_df(omop_db:OMOP_data) -> pd.DataFrame:
                on='visit_occurrence_id',
                rsuffix='_visit'
           )
-
-     visit_condition_df['ccsr_code'] = visit_condition_df['condition_source_value'].apply(lambda x: mapper.map(x.strip(), 
-                                                                                                              source='icd10', 
-                                                                                                              target='ccsr'))
-     visit_condition_df['icd10_chapters'] = visit_condition_df['condition_source_value'].apply(lambda x: mapper.map(x.strip(), 
-                                                                                                                   source='icd10', 
-                                                                                                                   target='chapter'))
+     ### HLUZ data adaptation
      
-     return visit_condition_df[visit_condition_df['ccsr_code'].notnull() & visit_condition_df['icd10_chapters'].notnull()]
+     def mutate_icd_code(original_code, validator=validator):
+          code = original_code
+          code = original_code.replace('.','')
+          if validator.validate(code, expects='icd9_diagnostic'):
+               return code
+          
+          for suffix in ['00','0','1']:
+               suff_code = code + suffix
+               if validator.validate(suff_code, expects='icd9_diagnostic'):
+                    return suff_code
+          
+          return original_code
+
+     if HLuz_data:
+          visit_condition_df['condition_source_value']=visit_condition_df['condition_source_value'].apply(mutate_icd_code)
+     
+     visit_condition_df[f'{CCR_VERSION}_code'] = visit_condition_df['condition_source_value'].apply(lambda x: mapper.map(x.strip(), 
+                                                                                                              source=ICD_VERSION,# 'icd10', 
+                                                                                                              target=CCR_VERSION,# 'ccsr'
+                                                                                                              )
+                                                                                          )
+     visit_condition_df[f'{ICD_VERSION}_chapters'] = visit_condition_df['condition_source_value'].apply(lambda x: mapper.map(x.strip(), 
+                                                                                                                   source=ICD_VERSION, #'icd10', 
+                                                                                                                   target='chapter'))
+
+     return visit_condition_df[visit_condition_df[f'{CCR_VERSION}_code'].notnull() & visit_condition_df[f'{ICD_VERSION}_chapters'].notnull()]
 
 @st.cache_data
 def get_chapter_df(visit_condition_df:pd.DataFrame, selected_chapter_code:str) -> pd.DataFrame:
-     return visit_condition_df[visit_condition_df['icd10_chapters'] == selected_chapter_code].drop(['icd10_chapters'], axis=1)
+     return visit_condition_df[visit_condition_df[f'{ICD_VERSION}_chapters'] == selected_chapter_code].drop([f'{ICD_VERSION}_chapters'], axis=1)
 
 @st.cache_data
 def get_period_freq_tables(chapter_df:pd.DataFrame, period_string) -> tuple[pd.DataFrame, pd.DataFrame]:
-     return period_freq_tables(chapter_df, 'ccsr_code', period_string)
+     return period_freq_tables(chapter_df, f'{CCR_VERSION}_code', period_string)
 
 # @st.cache_data(show_spinner="Calculating IGT embeddings...")
 @st.cache_data
@@ -70,11 +94,12 @@ st.sidebar.title("Temporal Change Detection")
 
 omop_db = load_pandas_db()
 mapper = Mapper()
+validator = Validator() 
 visit_condition_df = get_visit_conditions_df(omop_db)
 with open(ICD10_CHAPTER_DESCRIPTION, 'r') as fp:
      ICD10_chapters_mapping = json.load(fp)
      
-chapter_selection = st.sidebar.selectbox('Select ICD10 Chapter',[f'{key}: {value}' for key, value in ICD10_chapters_mapping.items() if key in visit_condition_df['icd10_chapters'].unique()])
+chapter_selection = st.sidebar.selectbox(f'Select {ICD_VERSION.upper()} chapter',[f'{key}: {value}' for key, value in ICD10_chapters_mapping.items() if key in visit_condition_df['icd10_chapters'].unique()])
 selected_chapter_code = chapter_selection.split()[0][:-1]
 structured_df = get_chapter_df(visit_condition_df, selected_chapter_code)
 
@@ -107,7 +132,7 @@ heatmap_img = io.BytesIO()
 fig.savefig(heatmap_img, format='png')
 
 btn = ste.download_button(
-     label="download heatmap",
+     label="save heatmap",
      data=heatmap_img,
      file_name=save_heatmap_filename,
      mime='image/png'
@@ -144,7 +169,7 @@ if freq_type == 'relative':
                fig.savefig(igt_img, format='png')
 
                ste.download_button(
-                    label="download IGT",
+                    label="save IGT plot",
                     data=igt_img,
                     file_name=save_igt_filename,
                     mime='image/png'
