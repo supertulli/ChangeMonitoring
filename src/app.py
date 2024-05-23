@@ -1,5 +1,6 @@
 import io
 import json
+from operator import index
 import os
 
 from datetime import date
@@ -64,11 +65,13 @@ def get_visit_conditions_df(omop_db:OMOP_data) -> pd.DataFrame:
      visit_condition_df[f'{CCR_VERSION}_code'] = visit_condition_df['condition_source_value'].apply(lambda x: mapper.map(x.strip(), 
                                                                                                               source=ICD_VERSION,# 'icd10', 
                                                                                                               target=CCR_VERSION,# 'ccsr'
-                                                                                                              )
-                                                                                          )
+                                                                                                                   )
+                                                                                                         ) # type: ignore
      visit_condition_df[f'{ICD_VERSION}_chapters'] = visit_condition_df['condition_source_value'].apply(lambda x: mapper.map(x.strip(), 
                                                                                                                    source=ICD_VERSION, #'icd10', 
-                                                                                                                   target='chapter'))
+                                                                                                                   target='chapter'
+                                                                                                                   )
+                                                                                                    ) # type: ignore
 
      return visit_condition_df[visit_condition_df[f'{CCR_VERSION}_code'].notnull() & visit_condition_df[f'{ICD_VERSION}_chapters'].notnull()]
 
@@ -137,6 +140,17 @@ btn = ste.download_button(
      file_name=save_heatmap_filename,
      mime='image/png'
 )
+
+# Legend
+with open('./data/mappings/ccsr_descriptions.json', 'r') as fp:
+     code_descriptions_dict = json.load(fp)
+     
+with st.expander("Codes' descriptions:"):
+     for code in active_df.drop('date',axis=1).columns:
+          st.write(f"{code}: {code_descriptions_dict[code]}")   
+     # st.write("".join([f"{code}: {code_descriptions_dict[code]}. \n" for code in active_df.drop('date',axis=1).columns]))
+
+# IGT plot
 
 if freq_type == 'relative':
 
