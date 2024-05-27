@@ -126,7 +126,7 @@ fig, ax = plt.subplots(figsize=(20,8), )
 plot_df = active_df.drop('date', axis=1).T
 plt.title(f'ICD-10 Chapter {selected_chapter_code}')
 
-sns.heatmap(plot_df.sort_index(ascending=False), ax=ax)    
+sns.heatmap(plot_df.sort_index(ascending=True), ax=ax)    
 
 st.pyplot(fig)
 
