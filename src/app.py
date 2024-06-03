@@ -25,6 +25,8 @@ ICD10_CHAPTER_DESCRIPTION = os.getenv('ICD10_CHAPTER_DESCRIPTION')
 HLUZ_DATA = os.getenv('HLUZ_data')
 ICD_VERSION = os.getenv('ICD_VERSION') # either 'icd9' or 'icd10'
 CCR_VERSION = os.getenv('CCR_VERSION') # either 'ccs' or 'ccsr'
+ATC_STRUCTURED_CODES = os.getenv('ATC_STRUCTURED_CODES')
+ATC_CODES_DESCRIPTIONS = os.getenv('ATC_CODES_DESCRIPTIONS')
 
 HLuz_data = (HLUZ_DATA == 'True')
 
@@ -44,8 +46,8 @@ def get_visit_conditions_df(omop_db:OMOP_data) -> pd.DataFrame:
                on='visit_occurrence_id',
                rsuffix='_visit'
           )
+          
      ### HLUZ data adaptation
-     
      def mutate_icd_code(original_code, validator=validator):
           code = original_code
           code = original_code.replace('.','')
@@ -75,13 +77,42 @@ def get_visit_conditions_df(omop_db:OMOP_data) -> pd.DataFrame:
 
      return visit_condition_df[visit_condition_df[f'{CCR_VERSION}_code'].notnull() & visit_condition_df[f'{ICD_VERSION}_chapters'].notnull()]
 
+### END : HLUZ data adaptation ###################
+
 @st.cache_data
 def get_chapter_df(visit_condition_df:pd.DataFrame, selected_chapter_code:str) -> pd.DataFrame:
      return visit_condition_df[visit_condition_df[f'{ICD_VERSION}_chapters'] == selected_chapter_code].drop([f'{ICD_VERSION}_chapters'], axis=1)
 
 @st.cache_data
-def get_period_freq_tables(chapter_df:pd.DataFrame, period_string) -> tuple[pd.DataFrame, pd.DataFrame]:
+def get_visit_drugs_df(omop_db:OMOP_data) -> pd.DataFrame:
+     visit_drug_df = omop_db.clinical_tables.drug_exposure[['drug_source_value','visit_occurrence_id']]\
+          .join(
+               omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
+          .set_index('visit_occurrence_id'),
+               on='visit_occurrence_id',
+               rsuffix='_visit'
+          )
+     
+     return visit_drug_df[visit_drug_df['drug_source_value'].notnull()]
+
+def get_atc_level_df(visit_drug_df:pd.DataFrame,atc_parent_code:str|None, atc_child_level:int) -> pd.DataFrame:
+     slice_dict = {
+          1: slice(0,1), 2: slice(0,3), 3: slice(0,4), 4: slice(0,5), 5: slice(0,7)
+     }
+     if atc_parent_code:
+          visit_drug_df['ATC_parent_level'] = visit_drug_df['drug_source_value'].apply(lambda x: x[slice_dict[atc_child_level-1]])
+     visit_drug_df['ATC_current_level'] = visit_drug_df['drug_source_value'].apply(lambda x: x[slice_dict[atc_child_level]])
+     
+     return visit_drug_df[visit_drug_df['ATC_parent_level'] == atc_parent_code].drop(['ATC_parent_level'], axis=1) if atc_parent_code else visit_drug_df
+          
+     
+
+@st.cache_data
+def get_diagnoses_period_freq_tables(chapter_df:pd.DataFrame, period_string:str) -> tuple[pd.DataFrame, pd.DataFrame]:
      return period_freq_tables(chapter_df, f'{CCR_VERSION}_code', period_string)
+
+def get_prescriptions_period_freq_tables(chapter_df:pd.DataFrame, period_string:str) -> tuple[pd.DataFrame, pd.DataFrame]:
+     return period_freq_tables(chapter_df, 'ATC_current_level', period_string)
 
 # @st.cache_data(show_spinner="Calculating IGT embeddings...")
 @st.cache_data
@@ -96,19 +127,77 @@ st.set_page_config(page_title="Temporal Change Detection", layout="wide")
 st.sidebar.title("Temporal Change Detection")
 
 omop_db = load_pandas_db()
-mapper = Mapper()
-validator = Validator() 
-visit_condition_df = get_visit_conditions_df(omop_db)
-with open(ICD10_CHAPTER_DESCRIPTION, 'r') as fp:
-     ICD10_chapters_mapping = json.load(fp)
-     
-chapter_selection = st.sidebar.selectbox(f'Select {ICD_VERSION.upper()} chapter',[f'{key}: {value}' for key, value in ICD10_chapters_mapping.items() if key in visit_condition_df['icd10_chapters'].unique()])
-selected_chapter_code = chapter_selection.split()[0][:-1]
-structured_df = get_chapter_df(visit_condition_df, selected_chapter_code)
 
+data_domain = st.sidebar.radio('Select analysis domain:',
+                         ("Diagnostics", "Prescriptions")
+                              )
+if data_domain == "Diagnostics":
+     mapper = Mapper()
+     validator = Validator() 
+     visit_condition_df = get_visit_conditions_df(omop_db)
+     with open(ICD10_CHAPTER_DESCRIPTION, 'r') as fp:
+          ICD10_chapters_mapping = json.load(fp)
+          
+     chapter_selection = st.sidebar.selectbox(f'Select {ICD_VERSION.upper()} chapter',
+                                             [f'{key}: {value}' for key, value in ICD10_chapters_mapping.items() if key in visit_condition_df['icd10_chapters'].unique()])
+     selected_chapter_code = chapter_selection.split()[0][:-1]
+     structured_df = get_chapter_df(visit_condition_df, selected_chapter_code)
+
+if data_domain == "Prescriptions":
+     visit_drugs_df = get_visit_drugs_df(omop_db)
+     with open(ATC_STRUCTURED_CODES, 'r') as fp:
+          ATC_structured_codes = json.load(fp)
+     with open(ATC_CODES_DESCRIPTIONS, 'r') as fp:
+          ATC_codes_descriptions = json.load(fp)
+     structured_df = get_atc_level_df(visit_drugs_df, None, 1)
+     parent_atc_code = None
+     level_1_atc = st.sidebar.selectbox('Select level 1 ATC code', [None]+[f'{key}: {value}' 
+                                                                           for key, value in ATC_codes_descriptions.get('level_1').items() 
+                                                                           if key in structured_df['ATC_current_level'].unique()])
+     if level_1_atc:
+          parent_atc_code = level_1_atc.split()[0][:-1]
+          structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 2)
+          children_codes = ATC_structured_codes['level_1'].get(parent_atc_code)
+          level_2_atc = st.sidebar.selectbox('Select level 2 ATC code', 
+                                             [None]+[f'{key}: {value}' 
+                                                       for key, value in ATC_codes_descriptions.get('level_2').items() 
+                                                       if key in structured_df['ATC_current_level'].unique() and key in children_codes
+                                                       ]
+                                             )
+          if level_2_atc:
+               parent_atc_code = level_2_atc.split()[0][:-1]
+               structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 3)
+               children_codes = ATC_structured_codes['level_2'].get(parent_atc_code)
+               level_3_atc = st.sidebar.selectbox('Select level 3 ATC code',
+                                                  [None]+[f'{key}: {value}' 
+                                                            for key, value in ATC_codes_descriptions.get('level_3').items() 
+                                                            if key in structured_df['ATC_current_level'].unique() and key in children_codes
+                                                            ]
+                                                  )
+               if level_3_atc:
+                    parent_atc_code = level_3_atc.split()[0][:-1]
+                    structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 4)
+                    children_codes = ATC_structured_codes['level_3'].get(parent_atc_code)
+                    level_4_atc = st.sidebar.selectbox('Select level 4 ATC code',
+                                                       [None]+[f'{key}: {value}'
+                                                                 for key, value in ATC_codes_descriptions.get('level_4').items()
+                                                                 if key in structured_df['ATC_current_level'].unique() and key in children_codes
+                                                                 ]
+                                                       )
+                    if level_4_atc:
+                         parent_atc_code = level_4_atc.split()[0][:-1]
+                         structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 5)
+                         children_codes = ATC_structured_codes['level_4'].get(parent_atc_code)
+     
+     
 period_string = st.sidebar.radio('Select period:', ('Yearly', 'Monthly', 'Weekly', 'Daily'), index=1)
 period = {'Yearly':'YE', 'Monthly':'ME', 'Weekly':'W', 'Daily':'D'}[period_string]
-ccsr_abs_freq, ccsr_rel_freq = get_period_freq_tables(structured_df, period)
+
+if data_domain == "Diagnostics":
+     ccsr_abs_freq, ccsr_rel_freq = get_diagnoses_period_freq_tables(structured_df, period)
+elif data_domain == "Prescriptions":
+     ccsr_abs_freq, ccsr_rel_freq = get_prescriptions_period_freq_tables(structured_df, period)
+
 
 freq_type = st.sidebar.radio('Absolute or relative frequency:', ('absolute', 'relative'), index=1)
 st.sidebar.write("Note: to visualize an IGT plot, you must select relative frequency.")
@@ -124,8 +213,11 @@ active_df = active_df[(pd.to_datetime(active_df['date']) >= min_date) & (pd.to_d
 
 fig, ax = plt.subplots(figsize=(20,8), )
 plot_df = active_df.drop('date', axis=1).T
-plt.title(f'ICD-10 Chapter {selected_chapter_code}')
 
+if data_domain == "Diagnostics":
+     plt.title(f'ICD-10 Chapter {selected_chapter_code} - {ICD_VERSION.upper()}')
+elif data_domain == "Prescriptions":
+     plt.title(f'ATC {parent_atc_code} selected_chapter_code - one level bellow prescriptions')
 sns.heatmap(plot_df.sort_index(ascending=True), ax=ax)    
 
 st.pyplot(fig)
@@ -142,12 +234,13 @@ btn = ste.download_button(
 )
 
 # Legend
-with open('./data/mappings/ccsr_descriptions.json', 'r') as fp:
-     code_descriptions_dict = json.load(fp)
-     
-with st.expander("Codes' descriptions:"):
-     for code in active_df.drop('date',axis=1).columns:
-          st.write(f"{code}: {code_descriptions_dict[code]}")   
+if data_domain == "Diagnostics":
+     with open('./data/mappings/ccsr_descriptions.json', 'r') as fp:
+          code_descriptions_dict = json.load(fp)
+          
+     with st.expander("Codes' descriptions:"):
+          for code in active_df.drop('date',axis=1).columns:
+               st.write(f"{code}: {code_descriptions_dict[code]}")   
      # st.write("".join([f"{code}: {code_descriptions_dict[code]}. \n" for code in active_df.drop('date',axis=1).columns]))
 
 # IGT plot

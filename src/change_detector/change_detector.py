@@ -57,8 +57,8 @@ class PDFChangeDetector:
             self._update_geo_mean_estimators(new_dist)
             self._estimated_alpha = 1/2*(1+self._dist_geo_mean/(1-self._dist_geo_mean-self._complementary_dist_geo_mean))
             self._estimated_beta =  1/2*(1+self._complementary_dist_geo_mean/(1-self._dist_geo_mean-self._complementary_dist_geo_mean))
-        print("new alpha:", self._estimated_alpha, "  new beta:", self._estimated_beta)
-        print("geo_mean:", self._dist_geo_mean, "  complementary geo_mean:", self._complementary_dist_geo_mean)
+        # print("new alpha:", self._estimated_alpha, "  new beta:", self._estimated_beta)
+        # print("geo_mean:", self._dist_geo_mean, "  complementary geo_mean:", self._complementary_dist_geo_mean)
             
     def _reset_detector_parameters(self, ref_PDF:pd.Series) -> None:
         self._estimated_alpha = None
@@ -77,35 +77,35 @@ class PDFChangeDetector:
             [(new_dist, self._dist_geo_mean), (1-new_dist, self._complementary_dist_geo_mean)]
         )
     
-    def detect_change(self,new_pdf:pd.Series) -> ControlState:
+    def detect_change(self,new_pdf:pd.Series) -> tuple[ControlState, float|None, float|None]:
         
         if self._reference_PDF is None:
             self._reset_detector_parameters(new_pdf)
-            print("First pdf taken as reference.")
-            return ControlState.IN_CONTROL
+            # print("First pdf taken as reference.")
+            return ControlState.IN_CONTROL, self._estimated_alpha, self._estimated_beta
         else:
             self._update_alpha_fading_pdf(new_pdf)
             pdf_dist = JSD_distance(self._reference_PDF, self._alpha_fading_pdf)
-            print("PDF distance:", pdf_dist, "current_order:", self._run_order)
+            # print("PDF distance:", pdf_dist, "current_order:", self._run_order)
             # print("JSD_distance:", jensenshannon(self._reference_PDF, self._alpha_fading_pdf, base=2)) # alternatively
             self._update_beta_distribution_parameters(pdf_dist)
             self._run_order += 1
             if not all([self._estimated_alpha, self._estimated_beta]):
-                print("Only one distance estimator is available.")
-                return ControlState.IN_CONTROL
+                # print("Only one distance estimator is available.")
+                return ControlState.IN_CONTROL, self._estimated_alpha, self._estimated_beta
             u1, u2, u3 = map(lambda x: beta.ppf(x, self._estimated_alpha, self._estimated_beta), 
                             map(lambda x: (1+x)/2,
                                 [self._z1, self._z2, self._z3]))
             if not any([self._min_u1, self._min_u2, self._min_u3]) or u1 < self._min_u1:
                 self._min_u1, self._min_u2, self._min_u3 = u1, u2, u3
-            print("current u1:", u1)
-            print("min u1:", self._min_u1, "  min u2:", self._min_u2, "  min u3:", self._min_u3)
+            # print("current u1:", u1)
+            # print("min u1:", self._min_u1, "  min u2:", self._min_u2, "  min u3:", self._min_u3)
             if u1 < self._min_u2:
-                return ControlState.IN_CONTROL
+                return ControlState.IN_CONTROL, self._estimated_alpha, self._estimated_beta
             elif u1 < self._min_u3:
-                return ControlState.WARNING
+                return ControlState.WARNING, self._estimated_alpha, self._estimated_beta
             else:
                 self._reset_detector_parameters(new_pdf)
-                print("Out of control. New pdf taken as reference.")
-                return ControlState.OUT_OF_CONTROL
+                # print("Out of control. New pdf taken as reference.")
+                return ControlState.OUT_OF_CONTROL, self._estimated_alpha, self._estimated_beta
         
