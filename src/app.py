@@ -235,7 +235,7 @@ btn = ste.download_button(
 
 # Legend
 if data_domain == "Diagnostics":
-     with open('./data/mappings/ccsr_descriptions.json', 'r') as fp:
+     with open(f'./data/mappings/{CCR_VERSION}_descriptions.json', 'r') as fp:
           code_descriptions_dict = json.load(fp)
           
      with st.expander("Codes' descriptions:"):
