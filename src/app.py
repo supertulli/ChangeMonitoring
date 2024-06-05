@@ -135,11 +135,12 @@ if data_domain == "Diagnostics":
      mapper = Mapper()
      validator = Validator() 
      visit_condition_df = get_visit_conditions_df(omop_db)
-     with open(ICD10_CHAPTER_DESCRIPTION, 'r') as fp:
-          ICD10_chapters_mapping = json.load(fp)
+     # with open(ICD10_CHAPTER_DESCRIPTION, 'r') as fp:
+     with open(f'./data/mappings/{ICD_VERSION}_chapter_description.json', 'r') as fp:
+          ICD_chapters_mapping = json.load(fp)
           
      chapter_selection = st.sidebar.selectbox(f'Select {ICD_VERSION.upper()} chapter',
-                                             [f'{key}: {value}' for key, value in ICD10_chapters_mapping.items() if key in visit_condition_df['icd10_chapters'].unique()])
+                                             [f'{key}: {value}' for key, value in ICD_chapters_mapping.items() if key in visit_condition_df[f'{ICD_VERSION}'].unique()])
      selected_chapter_code = chapter_selection.split()[0][:-1]
      structured_df = get_chapter_df(visit_condition_df, selected_chapter_code)
 
@@ -215,7 +216,7 @@ fig, ax = plt.subplots(figsize=(20,8), )
 plot_df = active_df.drop('date', axis=1).T
 
 if data_domain == "Diagnostics":
-     plt.title(f'ICD-10 Chapter {selected_chapter_code} - {ICD_VERSION.upper()}')
+     plt.title(f'{ICD_VERSION.upper()} - Chapter {selected_chapter_code}')
 elif data_domain == "Prescriptions":
      plt.title(f'ATC {parent_atc_code} selected_chapter_code - one level bellow prescriptions')
 sns.heatmap(plot_df.sort_index(ascending=True), ax=ax)    
