@@ -23,8 +23,11 @@ CSV_FOLDER_PATH = os.getenv('CSV_FOLDER_PATH')
 TABLE_STRUCTURE_JSON = os.getenv('TABLE_STRUCTURE_JSON')
 ICD10_CHAPTER_DESCRIPTION = os.getenv('ICD10_CHAPTER_DESCRIPTION')
 HLUZ_DATA = os.getenv('HLUZ_data')
+
 ICD_VERSION = os.getenv('ICD_VERSION') # either 'icd9' or 'icd10'
 CCR_VERSION = os.getenv('CCR_VERSION') # either 'ccs' or 'ccsr'
+DIAGNOSTIC_CODES_DESCRIPTIONS = os.getenv('DIAGNOSTIC_CODES_DESCRIPTIONS')
+
 ATC_STRUCTURED_CODES = os.getenv('ATC_STRUCTURED_CODES')
 ATC_CODES_DESCRIPTIONS = os.getenv('ATC_CODES_DESCRIPTIONS')
 
@@ -242,7 +245,7 @@ btn = ste.download_button(
 
 # Legend
 if data_domain == "Diagnostics":
-     with open(f'./data/mappings/{CCR_VERSION}_descriptions.json', 'r') as fp: # this not kosher, should be refactored
+     with open(DIAGNOSTIC_CODES_DESCRIPTIONS, 'r') as fp:
           code_descriptions_dict = json.load(fp)
           
      with st.expander(f"{CCR_VERSION.upper()} Codes' descriptions:"):
