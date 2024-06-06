@@ -95,6 +95,7 @@ def get_visit_drugs_df(omop_db:OMOP_data) -> pd.DataFrame:
      
      return visit_drug_df[visit_drug_df['drug_source_value'].notnull()]
 
+@st.cache_data
 def get_atc_level_df(visit_drug_df:pd.DataFrame,atc_parent_code:str|None, atc_child_level:int) -> pd.DataFrame:
      slice_dict = {
           1: slice(0,1), 2: slice(0,3), 3: slice(0,4), 4: slice(0,5), 5: slice(0,7)
