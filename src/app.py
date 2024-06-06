@@ -140,7 +140,7 @@ if data_domain == "Diagnostics":
           ICD_chapters_mapping = json.load(fp)
           
      chapter_selection = st.sidebar.selectbox(f'Select {ICD_VERSION.upper()} chapter',
-                                             [f'{key}: {value}' for key, value in ICD_chapters_mapping.items() if key in visit_condition_df[f'{ICD_VERSION}'].unique()])
+                                             [f'{key}: {value}' for key, value in ICD_chapters_mapping.items() if key in visit_condition_df[f'{ICD_VERSION}_chapters'].unique()])
      selected_chapter_code = chapter_selection.split()[0][:-1]
      structured_df = get_chapter_df(visit_condition_df, selected_chapter_code)
 
@@ -155,6 +155,7 @@ if data_domain == "Prescriptions":
      level_1_atc = st.sidebar.selectbox('Select level 1 ATC code', [None]+[f'{key}: {value}' 
                                                                            for key, value in ATC_codes_descriptions.get('level_1').items() 
                                                                            if key in structured_df['ATC_current_level'].unique()])
+     atc_child_level = 'level_1'
      if level_1_atc:
           parent_atc_code = level_1_atc.split()[0][:-1]
           structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 2)
@@ -165,6 +166,7 @@ if data_domain == "Prescriptions":
                                                        if key in structured_df['ATC_current_level'].unique() and key in children_codes
                                                        ]
                                              )
+          atc_child_level = 'level_2'
           if level_2_atc:
                parent_atc_code = level_2_atc.split()[0][:-1]
                structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 3)
@@ -175,6 +177,7 @@ if data_domain == "Prescriptions":
                                                             if key in structured_df['ATC_current_level'].unique() and key in children_codes
                                                             ]
                                                   )
+               atc_child_level = 'level_3'
                if level_3_atc:
                     parent_atc_code = level_3_atc.split()[0][:-1]
                     structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 4)
@@ -185,10 +188,12 @@ if data_domain == "Prescriptions":
                                                                  if key in structured_df['ATC_current_level'].unique() and key in children_codes
                                                                  ]
                                                        )
+                    atc_child_level = 'level_4'
                     if level_4_atc:
                          parent_atc_code = level_4_atc.split()[0][:-1]
                          structured_df = get_atc_level_df(visit_drugs_df, parent_atc_code, 5)
                          children_codes = ATC_structured_codes['level_4'].get(parent_atc_code)
+                         atc_child_level = 'level_5'
      
      
 period_string = st.sidebar.radio('Select period:', ('Yearly', 'Monthly', 'Weekly', 'Daily'), index=1)
@@ -236,13 +241,21 @@ btn = ste.download_button(
 
 # Legend
 if data_domain == "Diagnostics":
-     with open(f'./data/mappings/{CCR_VERSION}_descriptions.json', 'r') as fp:
+     with open(f'./data/mappings/{CCR_VERSION}_descriptions.json', 'r') as fp: # this not kosher, should be refactored
           code_descriptions_dict = json.load(fp)
           
-     with st.expander("Codes' descriptions:"):
+     with st.expander(f"{CCR_VERSION.upper()} Codes' descriptions:"):
           for code in active_df.drop('date',axis=1).columns:
                st.write(f"{code}: {code_descriptions_dict[code]}")   
      # st.write("".join([f"{code}: {code_descriptions_dict[code]}. \n" for code in active_df.drop('date',axis=1).columns]))
+
+if data_domain == "Prescriptions":
+     with open(ATC_CODES_DESCRIPTIONS, 'r') as fp:
+          ATC_codes_descriptions = json.load(fp)
+
+     with st.expander(f"ATC {atc_child_level} Codes' descriptions:"):
+          for code in active_df.drop('date',axis=1).columns:
+               st.write(f"{code}: {ATC_codes_descriptions.get(atc_child_level).get(code)}")
 
 # IGT plot
 
