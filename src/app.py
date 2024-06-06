@@ -246,7 +246,7 @@ if data_domain == "Diagnostics":
           
      with st.expander(f"{CCR_VERSION.upper()} Codes' descriptions:"):
           for code in active_df.drop('date',axis=1).columns:
-               st.write(f"{code}: {code_descriptions_dict[code]}")   
+               st.write(f"{code}: {code_descriptions_dict.get(code, 'No description available.')}")   
      # st.write("".join([f"{code}: {code_descriptions_dict[code]}. \n" for code in active_df.drop('date',axis=1).columns]))
 
 if data_domain == "Prescriptions":
@@ -255,7 +255,7 @@ if data_domain == "Prescriptions":
 
      with st.expander(f"ATC {atc_child_level} Codes' descriptions:"):
           for code in active_df.drop('date',axis=1).columns:
-               st.write(f"{code}: {ATC_codes_descriptions.get(atc_child_level).get(code)}")
+               st.write(f"{code}: {ATC_codes_descriptions.get(atc_child_level).get(code, 'No description available.')}")
 
 # IGT plot
 
