@@ -57,11 +57,13 @@ def get_dist_matrix(source_df:pd.DataFrame) -> np.ndarray:
 
     return dist_matrix
 
-def get_IGT_embeddings(dist_matrix:np.ndarray) -> np.ndarray:
-    embedding = MDS(n_components=dist_matrix.shape[0]-1, dissimilarity='precomputed')
-    return embedding.fit_transform(X=dist_matrix)
+def get_IGT_embeddings(dist_matrix:np.ndarray, output_dimension:int|None = None) -> tuple[np.ndarray, float]:
+    if output_dimension is None:
+        output_dimension = dist_matrix.shape[0]-1
+    embedding = MDS(n_components=output_dimension, dissimilarity='precomputed')
+    return embedding.fit_transform(X=dist_matrix), embedding.stress_
 
-def get_3D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = None) -> plt.Figure:
+def get_3D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = None, stress:float|None = None) -> plt.Figure:
     fig = plt.figure(figsize=(16,10))
     ax= Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
@@ -91,10 +93,13 @@ def get_3D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = N
             dist_embeddings[:,1], 
             dist_embeddings[:,2])
     
-
+    if stress:
+        ax.text2D(0.90, 1.035, f'stress: {stress:.5f}', ha='left', va='top', transform=ax.transAxes,
+                bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.5'))
+    
     return fig
 
-def get_2D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = None) -> plt.Figure:
+def get_2D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = None, stress:float|None = None) -> plt.Figure:
     fig = plt.figure(figsize=(16,10))
     ax = fig.add_subplot()
     ax.scatter(dist_embeddings[:,0], dist_embeddings[:,1])
@@ -108,6 +113,10 @@ def get_2D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = N
             
         adjust_text(texts, only_move={'points':'y', 'texts':'xy'}, arrowprops=dict(arrowstyle="->", color='r', lw=0.5))
     ax.plot(dist_embeddings[:,0], dist_embeddings[:,1])
+    
+    if stress:
+        ax.text(0.90, 1.035, f'stress: {stress:.5f}', ha='left', va='top', transform=ax.transAxes,
+                bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.5'))
     return fig
 
 def igt_plot(source_df:pd.DataFrame, type:Literal['3D', '2D']) -> plt.Figure:

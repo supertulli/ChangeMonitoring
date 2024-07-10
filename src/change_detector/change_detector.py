@@ -55,8 +55,8 @@ class PDFChangeDetector:
             self._dist_geo_mean, self._complementary_dist_geo_mean = new_dist, 1-new_dist
         else:    
             self._update_geo_mean_estimators(new_dist)
-            self._estimated_alpha = 1/2*(1+self._dist_geo_mean/(1-self._dist_geo_mean-self._complementary_dist_geo_mean))
-            self._estimated_beta =  1/2*(1+self._complementary_dist_geo_mean/(1-self._dist_geo_mean-self._complementary_dist_geo_mean))
+            self._estimated_alpha = 1/2+self._dist_geo_mean/(2*(1-self._dist_geo_mean-self._complementary_dist_geo_mean))
+            self._estimated_beta =  1/2+self._complementary_dist_geo_mean/(2*(1-self._dist_geo_mean-self._complementary_dist_geo_mean))
         # print("new alpha:", self._estimated_alpha, "  new beta:", self._estimated_beta)
         # print("geo_mean:", self._dist_geo_mean, "  complementary geo_mean:", self._complementary_dist_geo_mean)
             

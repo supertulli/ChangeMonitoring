@@ -120,11 +120,11 @@ def get_prescriptions_period_freq_tables(chapter_df:pd.DataFrame, period_string:
 
 # @st.cache_data(show_spinner="Calculating IGT embeddings...")
 @st.cache_data
-def igt_embbedings(source_df:pd.DataFrame, multiprocessing:bool = False) -> np.ndarray:
+def igt_embbedings(source_df:pd.DataFrame, output_dimension:int|None = None, multiprocessing:bool = False) -> tuple[np.ndarray, float]:
      
      dist_matrix = multiprocessing_get_dist_matrix(source_df) if multiprocessing else get_dist_matrix(source_df)
-     igt_embeddings = get_IGT_embeddings(dist_matrix)
-     return igt_embeddings
+     igt_embeddings, stress = get_IGT_embeddings(dist_matrix)
+     return igt_embeddings, stress
      
 st.set_page_config(page_title="Temporal Change Detection", layout="wide")
 
@@ -279,15 +279,16 @@ if freq_type == 'relative':
      
      if submit:
           with st.spinner("Rendering IGT plot..."):
-               igt_embbedings = igt_embbedings(active_df.drop('date', axis=1), multiprocessing)
+               output_dim = int(plt_type[0])
+               igt_embbedings, stress = igt_embbedings(active_df.drop('date', axis=1), output_dim,multiprocessing)
                if period_string == 'Yearly':
                     point_labels = active_df.index.to_flat_index().to_numpy() if point_labels else None
                else:
                     point_labels = ['-'.join([str(i) for i in row]) for row in active_df.index.to_flat_index().to_numpy()] if point_labels else None
                if plt_type == '3D':   
-                    fig = get_3D_IGT_plot(igt_embbedings, point_labels)
+                    fig = get_3D_IGT_plot(igt_embbedings, point_labels, stress)
                else:
-                    fig = get_2D_IGT_plot(igt_embbedings, point_labels)
+                    fig = get_2D_IGT_plot(igt_embbedings, point_labels, stress)
                st.pyplot(fig)
                save_igt_filename = "igt.png"
                igt_img = io.BytesIO()
