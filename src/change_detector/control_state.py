@@ -5,4 +5,4 @@ class ControlState(Enum):
     IN_CONTROL=0
     WARNING=1
     OUT_OF_CONTROL=2
-    COLLECTING=3
+    LEARNING=3
