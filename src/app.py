@@ -21,11 +21,12 @@ from igt import get_dist_matrix, get_IGT_embeddings, get_2D_IGT_plot, get_3D_IGT
 #load .env variables
 CSV_FOLDER_PATH = os.getenv('CSV_FOLDER_PATH')
 TABLE_STRUCTURE_JSON = os.getenv('TABLE_STRUCTURE_JSON')
-ICD10_CHAPTER_DESCRIPTION = os.getenv('ICD10_CHAPTER_DESCRIPTION')
+# ICD10_CHAPTER_DESCRIPTION = os.getenv('ICD10_CHAPTER_DESCRIPTION')
 HLUZ_DATA = os.getenv('HLUZ_data')
 
 ICD_VERSION = os.getenv('ICD_VERSION') # either 'icd9' or 'icd10'
 CCR_VERSION = os.getenv('CCR_VERSION') # either 'ccs' or 'ccsr'
+ICD_CHAPTER_DESCRIPTIONS = os.getenv('ICD_CHAPTER_DESCRIPTIONS')
 DIAGNOSTIC_CODES_DESCRIPTIONS = os.getenv('DIAGNOSTIC_CODES_DESCRIPTIONS')
 
 ATC_STRUCTURED_CODES = os.getenv('ATC_STRUCTURED_CODES')
@@ -140,7 +141,7 @@ if data_domain == "Diagnostics":
      validator = Validator() 
      visit_condition_df = get_visit_conditions_df(omop_db)
      # with open(ICD10_CHAPTER_DESCRIPTION, 'r') as fp:
-     with open(f'./data/mappings/{ICD_VERSION}_chapter_description.json', 'r') as fp:
+     with open(ICD_CHAPTER_DESCRIPTIONS, 'r') as fp:
           ICD_chapters_mapping = json.load(fp)
           
      chapter_selection = st.sidebar.selectbox(f'Select {ICD_VERSION.upper()} chapter',

@@ -47,6 +47,10 @@ class PDFChangeDetector:
         self._min_u2 = None
         self._min_u3 = None
         
+        # warning update memory
+        self._new_run_order = 0
+        
+        
         if self._method == "window":
             self._distances_window = []
         
@@ -157,6 +161,7 @@ class PDFChangeDetector:
             if u1 < self._min_u2:
                 return ControlState.IN_CONTROL, self._estimated_alpha, self._estimated_beta, self._min_u1, self._min_u2, self._min_u3, u1
             elif u1 < self._min_u3:
+                
                 return ControlState.WARNING, self._estimated_alpha, self._estimated_beta, self._min_u1, self._min_u2, self._min_u3, u1
             else:
                 self._reset_detector_parameters(new_pdf)
