@@ -122,9 +122,8 @@ def get_prescriptions_period_freq_tables(chapter_df:pd.DataFrame, period_string:
 # @st.cache_data(show_spinner="Calculating IGT embeddings...")
 @st.cache_data
 def igt_embbedings(source_df:pd.DataFrame, output_dimension:int|None = None, multiprocessing:bool = False) -> tuple[np.ndarray, float]:
-     
      dist_matrix = multiprocessing_get_dist_matrix(source_df) if multiprocessing else get_dist_matrix(source_df)
-     igt_embeddings, stress = get_IGT_embeddings(dist_matrix)
+     igt_embeddings, stress = get_IGT_embeddings(dist_matrix, output_dimension=output_dimension)
      return igt_embeddings, stress
      
 st.set_page_config(page_title="Temporal Change Detection", layout="wide")
@@ -281,7 +280,7 @@ if freq_type == 'relative':
      if submit:
           with st.spinner("Rendering IGT plot..."):
                output_dim = int(plt_type[0])
-               igt_embbedings, stress = igt_embbedings(active_df.drop('date', axis=1), output_dim,multiprocessing)
+               igt_embbedings, stress = igt_embbedings(active_df.drop('date', axis=1), output_dim, multiprocessing)
                if period_string == 'Yearly':
                     point_labels = active_df.index.to_flat_index().to_numpy() if point_labels else None
                else:

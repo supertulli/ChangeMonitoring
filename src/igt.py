@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import entropy
 from sklearn.manifold import MDS
+from sklearn.metrics import euclidean_distances
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -54,14 +55,30 @@ def get_dist_matrix(source_df:pd.DataFrame) -> np.ndarray:
             # print('i:', i, '  j:', j)
             dist_matrix[i][j] = np.sqrt((entropy(P_i,M, base=2)+entropy(P_j,M, base=2))/2)
             dist_matrix[j][i] = dist_matrix[i][j]
-
     return dist_matrix
 
 def get_IGT_embeddings(dist_matrix:np.ndarray, output_dimension:int|None = None) -> tuple[np.ndarray, float]:
     if output_dimension is None:
         output_dimension = dist_matrix.shape[0]-1
-    embedding = MDS(n_components=output_dimension, dissimilarity='precomputed')
-    return embedding.fit_transform(X=dist_matrix), embedding.stress_
+    mds = MDS(n_components=output_dimension, dissimilarity='precomputed')
+    embeddings = mds.fit_transform(X=dist_matrix)
+    
+    DE = euclidean_distances(embeddings[:,:output_dimension] if output_dimension is not None else embeddings)
+    stress = 0.5 * np.sum((DE - dist_matrix)**2)
+    print("SKL stress :")
+    print(mds.stress_)
+    print("Manual calculus of sklearn stress :")
+    print(stress)
+    print("")
+
+    ## Kruskal's stress (or stress formula 1)
+    stress1 = np.sqrt(stress / (0.5 * np.sum(dist_matrix**2)))
+    print("Kruskal's Stress :")
+    print("[Poor > 0.2 > Fair > 0.1 > Good > 0.05 > Excellent > 0.025 > Perfect > 0.0]")
+    print(stress1)
+    print("")
+    
+    return embeddings, stress1
 
 def get_3D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = None, stress:float|None = None) -> plt.Figure:
     fig = plt.figure(figsize=(16,10))
