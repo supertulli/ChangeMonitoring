@@ -19,8 +19,9 @@ def iter_geo_mean_estimator(new_value: float, order: int, previous_value:float|N
     # print("regular calc: ", ((previous_value**(order-1))*new_value)**(1/order))
     # print("log calc: ", np.exp((1/order)*np.log(new_value)+((order-1)/order)*np.log(previous_value)))
     # return ((previous_value**(order-1))*new_value)**(1/order)
-    if exp_log:
-        # print("order: ", order)
+    if exp_log and new_value != 0: # avoid Log(0) by using multiplicative formula
+        # print("order:", order)
+        # print("new value:",new_value)
         # print("log calc: ", np.exp((1/order)*np.log(new_value)+((order-1)/order)*np.log(previous_value)))
         return np.exp((1/order)*np.log(new_value)+((order-1)/order)*np.log(previous_value))
     else:

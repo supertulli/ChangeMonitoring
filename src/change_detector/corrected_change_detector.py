@@ -43,7 +43,7 @@ class PDFChangeDetector:
             self.current_process = Process(monitor_method=self._method, 
                                         monitor_size=self._monitor_size, 
                                         ref_PDF=new_pdf)
-            print("current process run_order:", self.current_process.run_order,"\n")
+            print("current process run_order:", self.current_process.run_order)
             # return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, None, None, None, None
             return DetectResponse(self.current_process.actual_state, 
                 self.current_process.estimated_alpha, 

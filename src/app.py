@@ -5,18 +5,24 @@ import os
 
 from datetime import date
 
+from matplotlib.lines import lineStyles
+from sklearn.model_selection import learning_curve
 import streamlit as st
 import streamlit_ext as ste
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from icdmappings import Mapper, Validator
 
-from inout.load_omop import OMOP_data
-from data_handler import period_freq_tables
-from igt import get_dist_matrix, get_IGT_embeddings, get_2D_IGT_plot, get_3D_IGT_plot, multiprocessing_get_dist_matrix
+from src.inout.load_omop import OMOP_data
+from src.data_handler import period_freq_tables
+from src.igt import get_dist_matrix, get_IGT_embeddings, get_2D_IGT_plot, get_3D_IGT_plot, multiprocessing_get_dist_matrix
+
+from src.change_detector.corrected_change_detector import PDFChangeDetector
+from src.change_detector.control_state import ControlState
 
 #load .env variables
 CSV_FOLDER_PATH = os.getenv('CSV_FOLDER_PATH')
@@ -216,11 +222,28 @@ if freq_type == 'absolute':
      active_df = ccsr_abs_freq.rename(columns={'visit_start_date':'date'})
 else:
      active_df = ccsr_rel_freq.rename(columns={'visit_start_date':'date'})
-     
+     change_detection = st.sidebar.checkbox("Detect changes", value=False)
+     st.sidebar.write("""Note: to detect changes, please be aware that a certain minimum amount of periods 
+                         should be considered.""")
+
 min_date, max_date = st.sidebar.slider("Set date boundaries: ", value = (active_df['date'].min().to_pydatetime(), active_df['date'].max().to_pydatetime()) )
 
 active_df = active_df[(pd.to_datetime(active_df['date']) >= min_date) & (pd.to_datetime(active_df['date']) <= max_date)]
 
+### change detection logic ###
+
+if change_detection:
+     detector = PDFChangeDetector(reference_size=25)
+     detection_df = active_df.drop('date', axis=1)
+     number_of_periods = detection_df.shape[0]
+     state_array=np.empty((number_of_periods,), dtype=object)
+     for i in range(number_of_periods):
+          print(f"PDF number {i} - {period_string} {detection_df.index[i]}:")
+          result = detector.detect_change(detection_df.iloc[i])
+          state_array[i] = result.state
+          print(result.state.value,":", result.state.name)
+          print("*****")
+     
 fig, ax = plt.subplots(figsize=(20,8), )
 plot_df = active_df.drop('date', axis=1).T
 
@@ -228,8 +251,29 @@ if data_domain == "Diagnostics":
      plt.title(f'{ICD_VERSION.upper()} - Chapter {selected_chapter_code}')
 elif data_domain == "Prescriptions":
      plt.title(f'ATC {parent_atc_code} selected_chapter_code - one level bellow prescriptions')
-sns.heatmap(plot_df.sort_index(ascending=True), ax=ax)    
 
+g = sns.heatmap(plot_df.sort_index(ascending=True), ax=ax)    
+if change_detection:
+     ax2 = g.twiny()
+     ax2.set_xlim(g.axes.get_xlim())
+     ax2.get_xaxis().set_visible(False)
+     ax2.grid(False)
+     for i in range(number_of_periods):
+          if state_array[i] == ControlState.LEARNING:
+               ax2.axvline(i, color='cyan', linestyle='dotted', alpha=0.5, label="Learning")
+          elif state_array[i] == ControlState.WARNING:
+               ax2.axvline(i, color='orange', linestyle='dotted', alpha=0.5, label="Warning")
+          elif state_array[i] == ControlState.OUT_OF_CONTROL:
+               with mpl.rc_context({'path.sketch':(3,30,1)}):
+                    ax2.axvline(i, color='red', alpha=0.5, label="Out-of-control") # linestyle='solid',
+
+     learning_line = mpl.lines.Line2D([], [] , color='cyan', linestyle='dotted')
+     warning_line=mpl.lines.Line2D([], [], color='orange', linestyle='dotted')
+     with mpl.rc_context({'path.sketch':(3,30,1)}):
+          out_of_control_line=mpl.lines.Line2D([], [], color='red', alpha=0.5)
+     
+     ax2.legend([learning_line, warning_line, out_of_control_line], ['Learning', 'Warning', 'Out-of-control'], loc="upper right")
+     
 st.pyplot(fig)
 
 save_heatmap_filename = "heatmap.png"
