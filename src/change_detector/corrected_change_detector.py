@@ -54,7 +54,7 @@ class PDFChangeDetector:
                 None)
             
         self.current_process.run_order += 1
-        print("current process run_order:", self.current_process.run_order,"\n")
+        print("current process run_order:", self.current_process.run_order)
         
         self.current_process.update_alpha_fading_pdf(new_pdf)
         

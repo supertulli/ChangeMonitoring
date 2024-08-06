@@ -1,12 +1,8 @@
 import io
 import json
-from operator import index
+
 import os
 
-from datetime import date
-
-from matplotlib.lines import lineStyles
-from sklearn.model_selection import learning_curve
 import streamlit as st
 import streamlit_ext as ste
 import pandas as pd
@@ -38,24 +34,41 @@ DIAGNOSTIC_CODES_DESCRIPTIONS = os.getenv('DIAGNOSTIC_CODES_DESCRIPTIONS')
 ATC_STRUCTURED_CODES = os.getenv('ATC_STRUCTURED_CODES')
 ATC_CODES_DESCRIPTIONS = os.getenv('ATC_CODES_DESCRIPTIONS')
 
+USE_DASK = (os.getenv('USE_DASK') == 'True')
+
 HLuz_data = (HLUZ_DATA == 'True')
 
 @st.cache_data(show_spinner="Loading csv data to memory pandas database...")
-def load_pandas_db(csv_folder_path:str = CSV_FOLDER_PATH, tables_structure_json :dict = TABLE_STRUCTURE_JSON) -> OMOP_data:
+def load_pandas_db(csv_folder_path:str = CSV_FOLDER_PATH, 
+                    tables_structure_json :dict = TABLE_STRUCTURE_JSON, 
+                    use_dask=USE_DASK) -> OMOP_data:
      with open(tables_structure_json, 'r') as f:
           tables_structure = json.load(f)
-     omop_db = OMOP_data(csv_data_path=csv_folder_path, tables_structure=tables_structure)
+     omop_db = OMOP_data(csv_data_path=csv_folder_path, 
+                         tables_structure=tables_structure,
+                         use_dask=use_dask)
      return omop_db
 
 @st.cache_data
-def get_visit_conditions_df(omop_db:OMOP_data) -> pd.DataFrame:
-     visit_condition_df = omop_db.clinical_tables.condition_occurrence[['condition_source_value','visit_occurrence_id']]\
-          .join(
-               omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
-          .set_index('visit_occurrence_id'),
-               on='visit_occurrence_id',
-               rsuffix='_visit'
-          )
+def get_visit_conditions_df(_omop_db:OMOP_data) -> pd.DataFrame:
+     
+     if USE_DASK:
+          visit_condition_df = _omop_db.clinical_tables.condition_occurrence[['condition_source_value','visit_occurrence_id','condition_end_date', 'condition_end_datetime', 'condition_start_date', 'condition_start_datetime']]\
+               .join(
+                    _omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date','visit_end_date', 'visit_end_datetime', 'visit_start_datetime']]\
+               .set_index('visit_occurrence_id'),
+                    on='visit_occurrence_id',
+                    rsuffix='_visit'
+               )
+          visit_condition_df =  visit_condition_df.compute().drop(['condition_end_date', 'condition_end_datetime', 'condition_start_date', 'condition_start_datetime', 'visit_end_date', 'visit_end_datetime', 'visit_start_datetime'],axis=1)
+     else:
+          visit_condition_df = _omop_db.clinical_tables.condition_occurrence[['condition_source_value','visit_occurrence_id']]\
+               .join(
+                    _omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
+               .set_index('visit_occurrence_id'),
+                    on='visit_occurrence_id',
+                    rsuffix='_visit'
+               )
           
      ### HLUZ data adaptation
      def mutate_icd_code(original_code, validator=validator):
@@ -94,14 +107,43 @@ def get_chapter_df(visit_condition_df:pd.DataFrame, selected_chapter_code:str) -
      return visit_condition_df[visit_condition_df[f'{ICD_VERSION}_chapters'] == selected_chapter_code].drop([f'{ICD_VERSION}_chapters'], axis=1)
 
 @st.cache_data
-def get_visit_drugs_df(omop_db:OMOP_data) -> pd.DataFrame:
-     visit_drug_df = omop_db.clinical_tables.drug_exposure[['drug_source_value','visit_occurrence_id']]\
-          .join(
-               omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
-          .set_index('visit_occurrence_id'),
-               on='visit_occurrence_id',
-               rsuffix='_visit'
-          )
+def get_visit_drugs_df(_omop_db:OMOP_data) -> pd.DataFrame:
+     
+     if USE_DASK:
+          visit_drug_df = _omop_db.clinical_tables.drug_exposure[['drug_source_value',
+                                                                 'visit_occurrence_id',
+                                                                 'drug_exposure_start_date',
+                                                                 'drug_exposure_start_datetime', 
+                                                                 'drug_exposure_end_date',
+                                                                 'drug_exposure_end_datetime',
+                                                                 'verbatim_end_date']]\
+               .join(
+                    _omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id',
+                                                            'visit_start_date',
+                                                            'visit_end_date', 
+                                                            'visit_end_datetime', 
+                                                            'visit_start_datetime']]\
+               .set_index('visit_occurrence_id'),
+                    on='visit_occurrence_id',
+                    rsuffix='_visit'
+               )
+          
+          visit_drug_df = visit_drug_df.compute().drop(['drug_exposure_start_datetime',
+                                                       'drug_exposure_end_date',
+                                                       'drug_exposure_end_datetime',
+                                                       'verbatim_end_date',
+                                                       'visit_end_date', 
+                                                       'visit_end_datetime', 
+                                                       'visit_start_datetime'],axis=1)
+     
+     else:
+          visit_drug_df = omop_db.clinical_tables.drug_exposure[['drug_source_value','visit_occurrence_id']]\
+               .join(
+                    omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
+               .set_index('visit_occurrence_id'),
+                    on='visit_occurrence_id',
+                    rsuffix='_visit'
+               )
      
      return visit_drug_df[visit_drug_df['drug_source_value'].notnull()]
 
