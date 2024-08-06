@@ -137,9 +137,9 @@ def get_visit_drugs_df(_omop_db:OMOP_data) -> pd.DataFrame:
                                                        'visit_start_datetime'],axis=1)
      
      else:
-          visit_drug_df = omop_db.clinical_tables.drug_exposure[['drug_source_value','visit_occurrence_id']]\
+          visit_drug_df = _omop_db.clinical_tables.drug_exposure[['drug_source_value','visit_occurrence_id']]\
                .join(
-                    omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
+                    _omop_db.clinical_tables.visit_occurrence[['visit_occurrence_id','visit_start_date']]\
                .set_index('visit_occurrence_id'),
                     on='visit_occurrence_id',
                     rsuffix='_visit'

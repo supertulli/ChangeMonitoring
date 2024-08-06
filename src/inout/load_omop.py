@@ -90,8 +90,15 @@ class OMOP_data:
                 file_path = os.path.join(self.csv_data_path, table.name+'.csv')
                 if os.path.isfile(file_path):
                     try:
-                        read_function = dd.read_csv if self.use_dask else pd.read_csv
-                        df_table = read_function(file_path, 
+                        if self.use_dask:
+                            df_table = dd.read_csv(file_path, 
+                                            usecols=tables_structure.get(table.name).get('column_list'),
+                                            dtype=tables_structure.get(table.name).get('dtype_dict'),
+                                            parse_dates=tables_structure.get(table.name).get('parse_dates'),
+                                            blocksize='1MB'
+                                            )
+                        else:
+                            df_table = pd.read_csv(file_path, 
                                             usecols=tables_structure.get(table.name).get('column_list'),
                                             dtype=tables_structure.get(table.name).get('dtype_dict'),
                                             parse_dates=tables_structure.get(table.name).get('parse_dates')
