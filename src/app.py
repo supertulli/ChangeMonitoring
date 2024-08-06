@@ -38,7 +38,7 @@ USE_DASK = (os.getenv('USE_DASK') == 'True')
 
 HLuz_data = (HLUZ_DATA == 'True')
 
-@st.cache_data(show_spinner="Loading csv data to memory pandas database...")
+@st.cache_resource(show_spinner="Loading csv data to memory pandas database...")
 def load_pandas_db(csv_folder_path:str = CSV_FOLDER_PATH, 
                     tables_structure_json :dict = TABLE_STRUCTURE_JSON, 
                     use_dask=USE_DASK) -> OMOP_data:
