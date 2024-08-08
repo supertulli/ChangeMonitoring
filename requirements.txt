@@ -13,4 +13,6 @@ tqdm
 streamlit
 streamlit-ext
 
+dask[complete]
+
 pydantic
