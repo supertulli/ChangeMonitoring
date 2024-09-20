@@ -146,13 +146,19 @@ class PDFChangeDetector:
             else:
                 #self.current_process.actual_state = ControlState.OUT_OF_CONTROL
                 print("Out of control: Replacing current process with candidate process.")
-                self.current_process = self.candidate_process
-                self.candidate_process = None
+                if self.candidate_process is not None:
+                    self.current_process = self.candidate_process
+                
+                else:
+                    self.current_process = Process(monitor_method=self._method, 
+                                        monitor_size=self._monitor_size, 
+                                        ref_PDF=new_pdf)
                 u1 = u2 = u3 = None
+                self.candidate_process = None
                 self.current_process.actual_state = ControlState.OUT_OF_CONTROL
-                #return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, self.current_process.min_u1, self.current_process.min_u2, self.current_process.min_u3, u1  
+                # return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, self.current_process.min_u1, self.current_process.min_u2, self.current_process.min_u3, u1  
             
-            return DetectResponse(self.current_process.actual_state, 
+            return DetectResponse(self.current_process.actual_state,                 
                 self.current_process.estimated_alpha, 
                 self.current_process.estimated_beta, 
                 self.current_process.min_u1, 

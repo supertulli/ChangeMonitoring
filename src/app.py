@@ -262,6 +262,7 @@ st.sidebar.write("Note: to visualize an IGT plot, you must select relative frequ
 
 if freq_type == 'absolute':
      active_df = ccsr_abs_freq.rename(columns={'visit_start_date':'date'})
+     change_detection = False
 else:
      active_df = ccsr_rel_freq.rename(columns={'visit_start_date':'date'})
      change_detection = st.sidebar.checkbox("Detect changes", value=False)
