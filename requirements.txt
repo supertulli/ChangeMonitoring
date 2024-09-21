@@ -6,11 +6,14 @@ scikit-learn
 matplotlib
 seaborn
 adjustText
+ipympl
 
 icd-mappings
 
 tqdm
 streamlit
 streamlit-ext
+
+dask[complete]
 
 pydantic

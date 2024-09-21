@@ -68,7 +68,6 @@ class PDFChangeDetector:
                 # print("PDF window:", self.current_process.distances_window, len(self.current_process.distances_window))
             self.current_process.actual_state = ControlState.LEARNING
             
-            # return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, None, None, None, None
             return DetectResponse(self.current_process.actual_state, 
                 self.current_process.estimated_alpha, 
                 self.current_process.estimated_beta, 
@@ -121,37 +120,21 @@ class PDFChangeDetector:
                             self.candidate_process.update_distances_window(pdf_dist)    
                         self.candidate_process.actual_state = ControlState.LEARNING    
             
-            if u1 < self.current_process.min_u2:
+            if (pdf_dist==0) or (u1 < self.current_process.min_u2): #first condition for edge case of constant pdf in learning
                 if self.candidate_process is not None: # Forget candidate process
                     self.candidate_process = None
                 self.current_process.actual_state = ControlState.IN_CONTROL
-                # return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, self.current_process.min_u1, self.current_process.min_u2, self.current_process.min_u3, u1
-                # return DetectResponse(self.current_process.actual_state, 
-                #                     self.current_process.estimated_alpha, 
-                #                     self.current_process.estimated_beta, 
-                #                     self.current_process.min_u1, 
-                #                     self.current_process.min_u2,
-                #                     self.current_process.min_u3, 
-                #                     u1)
+                
             elif u1 < self.current_process.min_u3:
                 self.current_process.actual_state = ControlState.WARNING
-                #return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, self.current_process.min_u1, self.current_process.min_u2, self.current_process.min_u3, u1
-                # return DetectResponse(self.current_process.actual_state, 
-                #     self.current_process.estimated_alpha, 
-                #     self.current_process.estimated_beta, 
-                #     self.current_process.min_u1, 
-                #     self.current_process.min_u2,
-                #     self.current_process.min_u3, 
-                #     u1)
+                
             else:
-                #self.current_process.actual_state = ControlState.OUT_OF_CONTROL
                 print("Out of control: Replacing current process with candidate process.")
                 self.current_process = self.candidate_process
                 self.candidate_process = None
                 u1 = u2 = u3 = None
                 self.current_process.actual_state = ControlState.OUT_OF_CONTROL
-                #return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, self.current_process.min_u1, self.current_process.min_u2, self.current_process.min_u3, u1  
-            
+                
             return DetectResponse(self.current_process.actual_state, 
                 self.current_process.estimated_alpha, 
                 self.current_process.estimated_beta, 

@@ -3,6 +3,7 @@ from dataclasses import dataclass, field, fields, InitVar
 import os
 
 import pandas as pd
+import dask.dataframe as dd 
 
 # define a dataclass to hold the db in memory
 # NOTE: this is soly for development purposes, data should be handled by a DB, to overcome memory limitations
@@ -67,6 +68,7 @@ class VocabularyTables:
 class OMOP_data:
     csv_data_path: InitVar[str | None] = None
     tables_structure: InitVar[dict | None] = None
+    use_dask: InitVar[bool] = False
     clinical_tables: ClinicalTables = field(default_factory=ClinicalTables)
     health_system_tables: HealthSystemTables = field(default_factory=HealthSystemTables)
     health_economics_tables: HealthEconomicsTabels = field(default_factory=HealthEconomicsTabels)
@@ -74,9 +76,10 @@ class OMOP_data:
     metadata_tables: MetadataTables = field(default_factory=MetadataTables)
     vocabulary_tables: VocabularyTables = field(default_factory=VocabularyTables)
     
-    def __post_init__(self, csv_data_path:str, tables_structure:dict):
+    def __post_init__(self, csv_data_path:str, tables_structure:dict, use_dask:bool = False):
         self.csv_data_path = csv_data_path
         self.tables_structure = tables_structure
+        self.use_dask = use_dask
         self._import_csv_files(tables_structure)
     
     def _import_csv_files(self, tables_structure:dict):
@@ -87,15 +90,23 @@ class OMOP_data:
                 file_path = os.path.join(self.csv_data_path, table.name+'.csv')
                 if os.path.isfile(file_path):
                     try:
-                        df_table = pd.read_csv(file_path, 
+                        if self.use_dask:
+                            df_table = dd.read_csv(file_path, 
+                                            usecols=tables_structure.get(table.name).get('column_list'),
+                                            dtype=tables_structure.get(table.name).get('dtype_dict'),
+                                            parse_dates=tables_structure.get(table.name).get('parse_dates'),
+                                            blocksize='1MB'
+                                            )
+                        else:
+                            df_table = pd.read_csv(file_path, 
                                             usecols=tables_structure.get(table.name).get('column_list'),
                                             dtype=tables_structure.get(table.name).get('dtype_dict'),
                                             parse_dates=tables_structure.get(table.name).get('parse_dates')
                                             )
                         setattr(getattr(self,field.name),table.name, df_table)
                         print('Ingesting file', file_path, "was successful.")
-                    except:
-                        print(f"Unable to ingest {field.name}.{table.name} given {table.name}.csv file is off standards.")
+                    except Exception as e:
+                        print(f"Unable to ingest {field.name}.{table.name} given {table.name}.csv file is off standards due to: {e}.")
                     
                 else:
                     print(f"Unable to ingest {field.name}.{table.name} as there is not corresponding {table.name}.csv file.")

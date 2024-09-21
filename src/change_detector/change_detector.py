@@ -5,7 +5,7 @@ from scipy.spatial.distance import jensenshannon
 from src.change_detector.stats_and_distance.stats_and_distance import JSD_distance, iter_geo_mean_estimator
 
 class PDFChangeDetector:
-    def __init__(self, a_memory:float=0.5, z1=0.68, z2=0.95, z3=0.997) -> None:
+    def __init__(self, a_memory:float=0.5, z1=0.68, z2=0.95, z3=0.997, exp_log:bool = True) -> None:
         
         #quantile parameters
         self._z1 = z1
@@ -31,6 +31,8 @@ class PDFChangeDetector:
         self._min_u1 = None
         self._min_u2 = None
         self._min_u3 = None
+        
+        self._exp_log = exp_log
         
         
         
@@ -73,7 +75,7 @@ class PDFChangeDetector:
         
     def _update_geo_mean_estimators(self, new_dist: float) ->None:
         self._dist_geo_mean, self._complementary_dist_geo_mean = (
-            iter_geo_mean_estimator(x1, self._run_order, x2) for x1, x2 in
+            iter_geo_mean_estimator(x1, self._run_order, x2, exp_log=self._exp_log) for x1, x2 in
             [(new_dist, self._dist_geo_mean), (1-new_dist, self._complementary_dist_geo_mean)]
         )
     
