@@ -43,7 +43,7 @@ class PDFChangeDetector:
             self.current_process = Process(monitor_method=self._method, 
                                         monitor_size=self._monitor_size, 
                                         ref_PDF=new_pdf)
-            print("current process run_order:", self.current_process.run_order)
+            # print("current process run_order:", self.current_process.run_order,"\n")
             # return self.current_process.actual_state, self.current_process.estimated_alpha, self.current_process.estimated_beta, None, None, None, None
             return DetectResponse(self.current_process.actual_state, 
                 self.current_process.estimated_alpha, 
@@ -54,7 +54,7 @@ class PDFChangeDetector:
                 None)
             
         self.current_process.run_order += 1
-        print("current process run_order:", self.current_process.run_order,"\n")
+        # print("current process run_order:", self.current_process.run_order,"\n")
         
         self.current_process.update_alpha_fading_pdf(new_pdf)
         
@@ -130,7 +130,12 @@ class PDFChangeDetector:
                 
             else:
                 print("Out of control: Replacing current process with candidate process.")
-                self.current_process = self.candidate_process
+                if self.candidate_process is None:
+                    self.current_process = Process(monitor_method=self._method,
+                                                    monitor_size=self._monitor_size,
+                                                    ref_PDF=new_pdf)
+                else:
+                    self.current_process = self.candidate_process
                 self.candidate_process = None
                 u1 = u2 = u3 = None
                 self.current_process.actual_state = ControlState.OUT_OF_CONTROL

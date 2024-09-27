@@ -276,7 +276,7 @@ active_df = active_df[(pd.to_datetime(active_df['date']) >= min_date) & (pd.to_d
 ### change detection logic ###
 
 if change_detection:
-     detector = PDFChangeDetector(reference_size=25)
+     detector = PDFChangeDetector(reference_size=15)
      detection_df = active_df.drop('date', axis=1)
      number_of_periods = detection_df.shape[0]
      state_array=np.empty((number_of_periods,), dtype=object)
@@ -295,7 +295,7 @@ if data_domain == "Diagnostics":
 elif data_domain == "Prescriptions":
      plt.title(f'ATC {parent_atc_code} selected_chapter_code - one level bellow prescriptions')
 
-g = sns.heatmap(plot_df.sort_index(ascending=True), ax=ax)    
+g = sns.heatmap(plot_df.sort_index(ascending=True), cmap="mako", ax=ax)    
 if change_detection:
      ax2 = g.twiny()
      ax2.set_xlim(g.axes.get_xlim())
@@ -303,17 +303,17 @@ if change_detection:
      ax2.grid(False)
      for i in range(number_of_periods):
           if state_array[i] == ControlState.LEARNING:
-               ax2.axvline(i, color='cyan', linestyle='dotted', alpha=0.5, label="Learning")
+               ax2.axvline(i, color='yellow', linestyle='dashed', alpha=0.5, label="Learning")
           elif state_array[i] == ControlState.WARNING:
-               ax2.axvline(i, color='orange', linestyle='dotted', alpha=0.5, label="Warning")
+               ax2.axvline(i, color='orange', linestyle='dashdot', alpha=0.5, label="Warning")
           elif state_array[i] == ControlState.OUT_OF_CONTROL:
                with mpl.rc_context({'path.sketch':(3,30,1)}):
-                    ax2.axvline(i, color='red', alpha=0.5, label="Out-of-control") # linestyle='solid',
+                    ax2.axvline(i, color='red', alpha=0.7, label="Out-of-control") # linestyle='solid',
 
-     learning_line = mpl.lines.Line2D([], [] , color='cyan', linestyle='dotted')
-     warning_line=mpl.lines.Line2D([], [], color='orange', linestyle='dotted')
+     learning_line = mpl.lines.Line2D([], [] , color='yellow', linestyle='dashed')
+     warning_line=mpl.lines.Line2D([], [], color='orange', linestyle='dashdot')
      with mpl.rc_context({'path.sketch':(3,30,1)}):
-          out_of_control_line=mpl.lines.Line2D([], [], color='red', alpha=0.5)
+          out_of_control_line=mpl.lines.Line2D([], [], color='red', alpha=0.7)
      
      ax2.legend([learning_line, warning_line, out_of_control_line], ['Learning', 'Warning', 'Out-of-control'], loc="upper right")
      
