@@ -60,7 +60,7 @@ def get_dist_matrix(source_df:pd.DataFrame) -> np.ndarray:
 def get_IGT_embeddings(dist_matrix:np.ndarray, output_dimension:int|None = None) -> tuple[np.ndarray, float]:
     if output_dimension is None:
         output_dimension = dist_matrix.shape[0]-1
-    mds = MDS(n_components=output_dimension, dissimilarity='precomputed')
+    mds = MDS(n_components=output_dimension, dissimilarity='precomputed', metric=True)
     embeddings = mds.fit_transform(X=dist_matrix)
     
     DE = euclidean_distances(embeddings[:,:output_dimension] if output_dimension is not None else embeddings)
