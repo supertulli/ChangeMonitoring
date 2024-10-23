@@ -1,0 +1,24 @@
+,Random Sample Cohort,Temporal sample,Diabetes Cohort,Heart Failure Cohort
+num_patients,200000,626725,7936,25676
+median_age,47.0,44.0,70.0,79.0
+q1_age,30.0,27.0,60.0,67.0
+q3_age,65.0,60.0,80.0,89.0
+gender_stats,"{8532: 55.73, 8507: 44.27}","{8532: 56.64, 8507: 43.36}","{8507: 56.82, 8532: 43.18}","{8532: 52.33, 8507: 47.67}"
+num_visits,2023855,4122384,382512,1132853
+num_condition_events,501839,1776374,134914,326183
+num_unique_conditions,5236,6434,3155,4236
+median_conditions_per_patient,2.0,2.0,10.0,8.0
+q1_conditions_per_patient,1.0,1.0,4.0,4.0
+q3_conditions_per_patient,5.0,4.0,22.0,18.0
+median_conditions_per_visit,1.0,1.0,1.0,1.0
+q1_conditions_per_visit,1.0,1.0,1.0,1.0
+q3_conditions_per_visit,1.0,1.0,1.0,1.0
+num_drug_events,2240059,4470273,986243,4475292
+num_unique_drugs,917,870,823,894
+median_drugs_per_patient,4.0,3.0,31.0,52.0
+q1_drugs_per_patient,2.0,2.0,8.0,14.0
+q3_drugs_per_patient,14.0,9.0,103.0,167.0
+median_drugs_per_visit,2.0,2.0,2.0,2.0
+q1_drugs_per_visit,1.0,1.0,1.0,1.0
+q3_drugs_per_visit,3.0,3.0,4.0,5.0
+iqr_drugs_per_visit,2.0,2.0,3.0,4.0

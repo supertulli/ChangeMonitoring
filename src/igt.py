@@ -111,7 +111,7 @@ def get_3D_IGT_plot(dist_embeddings:np.ndarray, point_labels:None|np.ndarray = N
             dist_embeddings[:,2])
     
     if stress:
-        ax.text2D(0.90, 1.035, f'stress: {stress:.5f}', ha='left', va='top', transform=ax.transAxes,
+        ax.text2D(0.90, 0.90, f'stress: {stress:.5f}', ha='left', va='top', transform=ax.transAxes,
                 bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.5'))
     
     return fig

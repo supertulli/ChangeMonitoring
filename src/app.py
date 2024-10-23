@@ -276,7 +276,7 @@ active_df = active_df[(pd.to_datetime(active_df['date']) >= min_date) & (pd.to_d
 ### change detection logic ###
 
 if change_detection:
-     detector = PDFChangeDetector(reference_size=15)
+     detector = PDFChangeDetector(reference_size=10, monitor_size=30, method='window')
      detection_df = active_df.drop('date', axis=1)
      number_of_periods = detection_df.shape[0]
      state_array=np.empty((number_of_periods,), dtype=object)
@@ -301,14 +301,14 @@ if change_detection:
      ax2.set_xlim(g.axes.get_xlim())
      ax2.get_xaxis().set_visible(False)
      ax2.grid(False)
-     for i in range(number_of_periods):
+     for i in range(number_of_periods): # plot at i+1 to set vline after corresponding pdf estimate 
           if state_array[i] == ControlState.LEARNING:
-               ax2.axvline(i, color='yellow', linestyle='dashed', alpha=0.5, label="Learning")
+               ax2.axvline(i+1, color='yellow', linestyle='dashed', alpha=0.5, label="Learning")
           elif state_array[i] == ControlState.WARNING:
-               ax2.axvline(i, color='orange', linestyle='dashdot', alpha=0.5, label="Warning")
+               ax2.axvline(i+1, color='orange', linestyle='dashdot', alpha=0.5, label="Warning")
           elif state_array[i] == ControlState.OUT_OF_CONTROL:
                with mpl.rc_context({'path.sketch':(3,30,1)}):
-                    ax2.axvline(i, color='red', alpha=0.7, label="Out-of-control") # linestyle='solid',
+                    ax2.axvline(i+1, color='red', alpha=0.7, label="Out-of-control") # linestyle='solid',
 
      learning_line = mpl.lines.Line2D([], [] , color='yellow', linestyle='dashed')
      warning_line=mpl.lines.Line2D([], [], color='orange', linestyle='dashdot')
